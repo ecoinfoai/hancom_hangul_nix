@@ -26,7 +26,12 @@
   libxkbcommon,
   nss,
   pango,
-  xorg,
+  libx11,
+  libxcomposite,
+  libxext,
+  libxi,
+  libxrender,
+  libxcb,
   zlib,
   libsForQt5,
   # user options
@@ -101,15 +106,13 @@ stdenv.mkDerivation {
     pango
     stdenv.cc.cc.lib
     zlib
-  ]
-  ++ (with xorg; [
-    libX11
-    libXcomposite
-    libXext
-    libXi
-    libXrender
+    libx11
+    libxcomposite
+    libxext
+    libxi
+    libxrender
     libxcb
-  ])
+  ]
   # hwp only uses public Qt5 API (symbol versions Qt_5 / Qt_5.11), so it runs
   # fine on the newer, ABI-compatible Qt 5.15 from nixpkgs.
   ++ lib.optionals useSystemQt (with libsForQt5; [
@@ -178,7 +181,7 @@ stdenv.mkDerivation {
       --set-default QT_SCALE_FACTOR ${scaleFactor} \
       --set LOCALE_ARCHIVE_2_27 ${glibcLocales}/lib/locale/locale-archive \
       --set LOCALE_ARCHIVE ${glibcLocales}/lib/locale/locale-archive \
-      --set-default QTCOMPOSE ${xorg.libX11}/share/X11/locale \
+      --set-default QTCOMPOSE ${libx11}/share/X11/locale \
       --set-default LC_ALL ${hwpLocale} \
       --set-default LANG ${hwpLocale}
 
