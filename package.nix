@@ -34,6 +34,7 @@
   libxcb,
   zlib,
   libsForQt5,
+  callPackage,
   # user options
   scaleFactor ? "1", # QT_SCALE_FACTOR, e.g. "1.2" to zoom
   # "fcitx5": QT_IM_MODULE=fcitx, through the fcitx5-qt plugin (needs nixpkgs Qt).
@@ -43,6 +44,9 @@
   # false: replace it with nixpkgs Qt 5.15.
   bundledQt ? inputMethod == "ibus",
   hwpLocale ? "ko_KR.UTF-8", # fixes Korean file names / Korean UI
+  # Hwp pastes from PRIMARY (the last selected text), not CLIPBOARD. true
+  # preloads shim/xcb_shim.so, which makes Ctrl+V paste CLIPBOARD.
+  pasteFromClipboard ? false,
 }:
 
 assert lib.assertOneOf "inputMethod" inputMethod [
@@ -71,6 +75,13 @@ let
 
   # Values passed to QT_IM_MODULE / XMODIFIERS
   imName = if inputMethod == "fcitx5" then "fcitx" else "ibus";
+
+  extraWrapperArgs = lib.optionals pasteFromClipboard [
+    "--prefix"
+    "LD_PRELOAD"
+    ":"
+    "${callPackage ./shim { }}/lib/xcb_shim.so"
+  ];
 in
 stdenv.mkDerivation {
   pname = "hancom-hwp";
@@ -192,7 +203,8 @@ stdenv.mkDerivation {
       --set LOCALE_ARCHIVE ${glibcLocales}/lib/locale/locale-archive \
       --set-default QTCOMPOSE ${libx11}/share/X11/locale \
       --set-default LC_ALL ${hwpLocale} \
-      --set-default LANG ${hwpLocale}
+      --set-default LANG ${hwpLocale} \
+      ${lib.escapeShellArgs extraWrapperArgs}
 
     substituteInPlace $out/share/applications/hoffice11-hwp.desktop \
       --replace-fail "Exec=/${appDir}/Bin/hwp" "Exec=$out/bin/hwp"
