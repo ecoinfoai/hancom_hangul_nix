@@ -39,9 +39,14 @@ Customize with `override`:
 inputs.hancom-hwp.packages.${system}.default.override {
   scaleFactor = "1.2";        # QT_SCALE_FACTOR (default "1"; env var still wins)
   inputMethod = "fcitx5";     # or "ibus"
+  bundledQt   = false;        # default: true for "ibus", false for "fcitx5"
   hwpLocale   = "ko_KR.UTF-8";
 }
 ```
+
+`bundledQt = false` with `inputMethod = "ibus"` runs ibus input on nixpkgs
+Qt 5.15 (its `qtbase` ships the ibus plugin). `inputMethod = "fcitx5"` needs
+`bundledQt = false`.
 
 With the overlay, `pkgs.hancom-hwp` is unfree, so allow it
 (`nixpkgs.config.allowUnfree` or an `allowUnfreePredicate`).
@@ -89,8 +94,8 @@ inputs.hancom-hwp.packages.${system}.hancom-fonts.override { fontSets = [ "hanco
   symbol versions), so the bundled Qt 5.11 is removed and nixpkgs Qt 5.15 is used.
   This lets the real `fcitx5-qt` Qt5 plugin load (`QT_IM_MODULE=fcitx`). A plugin
   built for Qt 5.15 cannot load into the bundled Qt 5.11.
-- **ibus mode:** keeps the bundled Qt 5.11. Plugins that need Qt modules not in
-  the bundle (Wayland, QML, eglfs, webgl) are removed.
+- **ibus mode:** keeps the bundled Qt 5.11 unless `bundledQt = false`. Plugins
+  that need Qt modules not in the bundle (Wayland, QML, eglfs, webgl) are removed.
 - The wrapper forces the X11 backend (`QT_QPA_PLATFORM=xcb`) and isolates
   `QT_PLUGIN_PATH`. It sets a full `glibcLocales` archive (`LOCALE_ARCHIVE_2_27`)
   so `ko_KR.UTF-8` works, which keeps Korean file names and the Korean UI.

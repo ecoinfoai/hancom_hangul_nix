@@ -2,6 +2,7 @@
 #
 # Starts hwp on a virtual X server with a GNOME session environment and
 # passes once its document window is mapped and the process is still alive.
+# Every file name in `loads` must also be mapped into the running process.
 {
   lib,
   runCommand,
@@ -10,7 +11,10 @@
   xdotool,
 }:
 
-hwp:
+{
+  hwp,
+  loads ? [ ],
+}:
 
 runCommand "${hwp.name}-smoke"
   {
@@ -45,6 +49,12 @@ runCommand "${hwp.name}-smoke"
         exit 1
       fi
       sleep 5
+      for lib in ${lib.escapeShellArgs loads}; do
+        if ! grep -q "/$lib\$" /proc/$pid/maps; then
+          echo "hwp did not load $lib" >&2
+          exit 1
+        fi
+      done
       if ! kill -0 $pid 2> /dev/null; then
         echo "hwp exited after mapping its window" >&2
         cat "$HOME/hwp.log" >&2

@@ -42,8 +42,18 @@
           smoke = pkgs.callPackage ./tests/smoke.nix { };
         in
         {
-          hancom-hwp-starts = smoke self.packages.${system}.hancom-hwp;
-          hancom-hwp-ibus-starts = smoke self.packages.${system}.hancom-hwp-ibus;
+          hancom-hwp-starts = smoke { hwp = self.packages.${system}.hancom-hwp; };
+          hancom-hwp-ibus-starts = smoke { hwp = self.packages.${system}.hancom-hwp-ibus; };
+          hancom-hwp-ibus-system-qt-starts = smoke {
+            hwp = self.packages.${system}.hancom-hwp.override {
+              inputMethod = "ibus";
+              bundledQt = false;
+            };
+            loads = [
+              "libQt5Core.so.${pkgs.libsForQt5.qtbase.version}"
+              "libibusplatforminputcontextplugin.so"
+            ];
+          };
         };
 
       formatter.${system} = pkgs.nixfmt;
