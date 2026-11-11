@@ -41,8 +41,14 @@
         let
           smoke = pkgs.callPackage ./tests/smoke.nix { };
           paste = pkgs.callPackage ./tests/paste.nix { };
+          cursorScale = pkgs.callPackage ./tests/cursor-scale.nix { };
         in
         {
+          hancom-hwp-cursor-scale = cursorScale {
+            base = self.packages.${system}.hancom-hwp;
+            scaled = self.packages.${system}.hancom-hwp.override { cursorScale = 4; };
+            factor = 4;
+          };
           hancom-hwp-pastes-from-clipboard = paste (
             self.packages.${system}.hancom-hwp.override { pasteFromClipboard = true; }
           );
@@ -50,7 +56,11 @@
             self.packages.${system}.hancom-hwp-ibus.override { pasteFromClipboard = true; }
           );
           hancom-hwp-starts = smoke { hwp = self.packages.${system}.hancom-hwp; };
-          hancom-hwp-ibus-starts = smoke { hwp = self.packages.${system}.hancom-hwp-ibus; };
+          hancom-hwp-ibus-starts = smoke {
+            hwp = self.packages.${system}.hancom-hwp-ibus;
+            # Qt dlopens it for themed, sized cursors.
+            loads = [ "libXcursor.so.1.0.2" ];
+          };
           hancom-hwp-ibus-system-qt-starts = smoke {
             hwp = self.packages.${system}.hancom-hwp.override {
               inputMethod = "ibus";
