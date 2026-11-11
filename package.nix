@@ -5,6 +5,7 @@
   dpkg,
   autoPatchelfHook,
   makeWrapper,
+  python3,
   # runtime libraries
   alsa-lib,
   atk,
@@ -47,6 +48,11 @@
   # Hwp pastes from PRIMARY (the last selected text), not CLIPBOARD. true
   # preloads shim/xcb_shim.so, which makes Ctrl+V paste CLIPBOARD.
   pasteFromClipboard ? false,
+  # Hwp draws its own 32 px .cur cursors, which ignore the cursor size
+  # settings. An integer factor enlarges them and unsets XCURSOR_SIZE, for
+  # XWayland with native scaling: pick 32 x factor ~ the cursor size in X
+  # pixels (e.g. 2 for a 24 px cursor at 2x).
+  cursorScale ? 1,
 }:
 
 assert lib.assertOneOf "inputMethod" inputMethod [
@@ -56,6 +62,9 @@ assert lib.assertOneOf "inputMethod" inputMethod [
 assert lib.assertMsg (
   !(bundledQt && inputMethod == "fcitx5")
 ) "hancom-hwp: inputMethod = \"fcitx5\" needs bundledQt = false; the fcitx5-qt plugin is built for Qt 5.15 and cannot load into the bundled Qt 5.11.";
+assert lib.assertMsg (
+  builtins.isInt cursorScale && cursorScale >= 1
+) "hancom-hwp: cursorScale must be a positive integer.";
 
 let
   appDir = "opt/hnc/hoffice11";
@@ -81,7 +90,18 @@ let
     "LD_PRELOAD"
     ":"
     "${callPackage ./shim { }}/lib/xcb_shim.so"
+  ]
+  # libXcursor then takes the size from the X server's Xcursor.size, which
+  # mutter matches to XWayland's scale; XCURSOR_SIZE is in logical pixels.
+  ++ lib.optionals (cursorScale != 1) [
+    "--unset"
+    "XCURSOR_SIZE"
   ];
+
+  cursorTools = lib.fileset.toSource {
+    root = ./cursor;
+    fileset = ./cursor;
+  };
 in
 stdenv.mkDerivation {
   pname = "hancom-hwp";
@@ -101,7 +121,8 @@ stdenv.mkDerivation {
     dpkg
     autoPatchelfHook
     makeWrapper
-  ];
+  ]
+  ++ lib.optional (cursorScale != 1) python3;
 
   buildInputs = [
     alsa-lib
@@ -158,6 +179,12 @@ stdenv.mkDerivation {
 
     mkdir -p $out/opt $out/bin
     cp -r opt/hnc $out/opt/
+  ''
+  + lib.optionalString (cursorScale != 1) ''
+    PYTHONDONTWRITEBYTECODE=1 python3 ${cursorTools}/cur_scale_test.py
+    python3 ${cursorTools}/cur_scale.py ${toString cursorScale} $out/${appDir}/Bin
+  ''
+  + ''
     cp -r usr/share $out/share
 
     qtdir=$out/${appDir}/Bin/qt

@@ -42,6 +42,7 @@ inputs.hancom-hwp.packages.${system}.default.override {
   bundledQt   = false;        # default: true for "ibus", false for "fcitx5"
   hwpLocale   = "ko_KR.UTF-8";
   pasteFromClipboard = true;  # Ctrl+V pastes CLIPBOARD, not PRIMARY (default false)
+  cursorScale = 2;            # enlarge Hwp's own cursors (default 1)
 }
 ```
 
@@ -104,6 +105,13 @@ inputs.hancom-hwp.packages.${system}.hancom-fonts.override { fontSets = [ "hanco
   leaves X selections in that state after a Wayland selection is cleared, and
   the bundled Qt 5.11 then retries until Hwp's watchdog reports an
   "unexpected problem".
+- **cursorScale:** Hwp draws its own 32 px `.cur` cursors (such as the text
+  I-beam), which ignore cursor themes and sizes. With XWayland's native scaling
+  (GNOME 47+ with `xwayland-native-scaling`), the X server runs at 2x and these
+  cursors look half-size. `cursorScale` enlarges them at build time, using
+  nearest-neighbour scaling of the bitmap and mask. It also unsets
+  `XCURSOR_SIZE`, so themed cursors take `Xcursor.size` from the X server.
+  Pick `32 × cursorScale ≈` the cursor size in X pixels.
 - The wrapper forces the X11 backend (`QT_QPA_PLATFORM=xcb`) and isolates
   `QT_PLUGIN_PATH`. It sets a full `glibcLocales` archive (`LOCALE_ARCHIVE_2_27`)
   so `ko_KR.UTF-8` works, which keeps Korean file names and the Korean UI.
