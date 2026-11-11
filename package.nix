@@ -49,9 +49,12 @@
   xxhash,
   # user options
   scaleFactor ? "1", # QT_SCALE_FACTOR, e.g. "1.2" to zoom
-  # "fcitx5": replace the bundled Qt 5.11 with nixpkgs Qt 5.15 + fcitx5-qt plugin.
-  # "ibus"  : keep the bundled Qt 5.11, which only ships an ibus input plugin.
+  # "fcitx5": QT_IM_MODULE=fcitx, through the fcitx5-qt plugin (needs nixpkgs Qt).
+  # "ibus"  : QT_IM_MODULE=ibus, through the ibus plugin both Qt builds ship.
   inputMethod ? "fcitx5",
+  # true : keep the bundled Qt 5.11.
+  # false: replace it with nixpkgs Qt 5.15.
+  bundledQt ? inputMethod == "ibus",
   hwpLocale ? "ko_KR.UTF-8", # fixes Korean file names / Korean UI
   # Patch libhsp.so so window repaints are detected by diffing the window
   # image (instead of MD5) and only the changed rectangles are repainted
@@ -76,10 +79,12 @@ assert lib.assertOneOf "inputMethod" inputMethod [
   "fcitx5"
   "ibus"
 ];
+assert lib.assertMsg (!(bundledQt && inputMethod == "fcitx5"))
+  "hancom-hwp: inputMethod = \"fcitx5\" needs bundledQt = false; the fcitx5-qt plugin is built for Qt 5.15 and cannot load into the bundled Qt 5.11.";
 
 let
   appDir = "opt/hnc/hoffice11";
-  useSystemQt = inputMethod == "fcitx5";
+  useSystemQt = !bundledQt;
 
   # Only Hwp is installed. Files used solely by Hcell (hcl), Hshow (hsl) and
   # Hword (hword): no Hwp binary links them or names them (NEEDED + strings
@@ -120,7 +125,7 @@ let
     "Shared/HwordTemplate"
   ];
 
-  # nixpkgs Qt 5.15 modules replacing the bundled Qt 5.11 ones (fcitx5 mode).
+  # nixpkgs Qt 5.15 modules replacing the bundled Qt 5.11 ones (bundledQt = false).
   systemQt = with libsForQt5; [
     qtbase
     qtsvg
@@ -129,10 +134,12 @@ let
     qtwebchannel
     qtlocation # Positioning
   ];
-  qtPluginPkgs = systemQt ++ [
-    libsForQt5.qtimageformats
-    libsForQt5.fcitx5-qt
-  ];
+  qtPluginPkgs =
+    systemQt
+    ++ [
+      libsForQt5.qtimageformats
+    ]
+    ++ lib.optional (inputMethod == "fcitx5") libsForQt5.fcitx5-qt;
   systemQtPluginPath = lib.concatMapStringsSep ":" (
     p: "${lib.getBin p}/${libsForQt5.qtbase.qtPluginPrefix}"
   ) qtPluginPkgs;
@@ -144,7 +151,7 @@ let
   ];
 
   # Values passed to QT_IM_MODULE / XMODIFIERS
-  imName = if useSystemQt then "fcitx" else "ibus";
+  imName = if inputMethod == "fcitx5" then "fcitx" else "ibus";
 in
 stdenv.mkDerivation {
   pname = "hancom-hwp";
@@ -236,7 +243,7 @@ stdenv.mkDerivation {
       ${./compat/qt511-stdcxx-shim.cpp}
   ''
   # Built against nixpkgs Qt 5.15 headers; it only uses QImage, QRegion and
-  # QWidget::update(QRegion), so it also runs on the bundled Qt 5.11 (ibus).
+  # QWidget::update(QRegion), so it also runs on the bundled Qt 5.11 (bundledQt).
   # The rpath is removed so autoPatchelf picks the Qt the variant uses.
   + lib.optionalString fastRepaint (
     let
