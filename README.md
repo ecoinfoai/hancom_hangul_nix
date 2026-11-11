@@ -106,9 +106,9 @@ inputs.hancom-hwp.packages.${system}.hancom-fonts.override { fontSets = [ "hanco
   the bundled Qt 5.11 then retries until Hwp's watchdog reports an
   "unexpected problem".
 - **cursorScale:** Hwp draws its own 32 px `.cur` cursors (such as the text
-  I-beam), which ignore cursor themes and sizes. With XWayland's native scaling
-  (GNOME 47+ with `xwayland-native-scaling`), the X server runs at 2x and these
-  cursors look half-size. `cursorScale` enlarges them at build time, using
+  I-beam), which ignore cursor themes and sizes. When the compositor runs
+  XWayland at native scaling (as GNOME does with fractional scaling), the X
+  server's pixels are 2x and these cursors look half-size. `cursorScale` enlarges them at build time, using
   nearest-neighbour scaling of the bitmap and mask. It also unsets
   `XCURSOR_SIZE`, so themed cursors take `Xcursor.size` from the X server.
   Pick `32 × cursorScale ≈` the cursor size in X pixels.
