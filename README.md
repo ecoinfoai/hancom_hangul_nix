@@ -56,6 +56,7 @@ inputs.hancom-hwp.packages.${system}.default.override {
   fastRepaint = true;         # false = leave Hancom's libhsp.so unpatched
   fastScroll  = true;         # false = keep Hwp's own mouse-wheel scrolling
   hidpiUi     = true;         # false = no high-DPI toolbar / menu fixes
+  pasteFromClipboard = true;  # Ctrl+V pastes CLIPBOARD, not PRIMARY (default false)
 }
 ```
 
@@ -210,6 +211,13 @@ inputs.hancom-hwp.packages.${system}.hancom-fonts.override { fontSets = [ "hanco
 - **ibus mode:** keeps the bundled Qt 5.11 unless `bundledQt = false`.
   Plugins that need Qt modules not in the bundle (Wayland, eglfs, webgl,
   virtual keyboard, MultimediaGstTools) are removed.
+- **pasteFromClipboard:** Hwp pastes from PRIMARY (the last selected text),
+  so Ctrl+V does not paste what was copied in other apps. The option preloads
+  `shim/xcb_shim.so`, which redirects Hwp's PRIMARY reads to CLIPBOARD. It also
+  reports CLIPBOARD owners that do not answer as absent. On GNOME, mutter
+  leaves X selections in that state after a Wayland selection is cleared, and
+  the bundled Qt 5.11 then retries until Hwp's watchdog reports an
+  "unexpected problem".
 - The wrapper forces the X11 backend (`QT_QPA_PLATFORM=xcb`) and isolates
   `QT_PLUGIN_PATH`. It sets a full `glibcLocales` archive (`LOCALE_ARCHIVE_2_27`)
   so `ko_KR.UTF-8` works, which keeps Korean file names and the Korean UI.

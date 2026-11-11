@@ -47,6 +47,7 @@
   zlib,
   libsForQt5,
   xxhash,
+  callPackage,
   # user options
   scaleFactor ? "1", # QT_SCALE_FACTOR, e.g. "1.2" to zoom
   # "fcitx5": QT_IM_MODULE=fcitx, through the fcitx5-qt plugin (needs nixpkgs Qt).
@@ -73,6 +74,9 @@
   # Scale2x, a font size box wide enough for its text, and recent file names
   # in the 파일 menu no longer cut off.
   hidpiUi ? true,
+  # Hwp pastes from PRIMARY (the last selected text), not CLIPBOARD. true
+  # preloads shim/xcb_shim.so, which makes Ctrl+V paste CLIPBOARD.
+  pasteFromClipboard ? false,
 }:
 
 assert lib.assertOneOf "inputMethod" inputMethod [
@@ -152,6 +156,13 @@ let
 
   # Values passed to QT_IM_MODULE / XMODIFIERS
   imName = if inputMethod == "fcitx5" then "fcitx" else "ibus";
+
+  extraWrapperArgs = lib.optionals pasteFromClipboard [
+    "--prefix"
+    "LD_PRELOAD"
+    ":"
+    "${callPackage ./shim { }}/lib/xcb_shim.so"
+  ];
 in
 stdenv.mkDerivation {
   pname = "hancom-hwp";
@@ -365,7 +376,8 @@ stdenv.mkDerivation {
         --set-default LC_ALL ${hwpLocale} \
         --set-default LANG ${hwpLocale} \
         ${lib.optionalString (fastRepaint && !fastScroll) "--set HWP_FASTSCROLL 0"} \
-        ${lib.optionalString (fastRepaint && !hidpiUi) "--set HWP_UIFIX 0"}
+        ${lib.optionalString (fastRepaint && !hidpiUi) "--set HWP_UIFIX 0"} \
+        ${lib.escapeShellArgs extraWrapperArgs}
 
     substituteInPlace $out/share/applications/hoffice11-hwp.desktop \
       --replace-fail "Exec=/${appDir}/Bin/hwp" "Exec=$out/bin/hwp"

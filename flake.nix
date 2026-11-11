@@ -40,8 +40,15 @@
       checks.${system} =
         let
           smoke = pkgs.callPackage ./tests/smoke.nix { };
+          paste = pkgs.callPackage ./tests/paste.nix { };
         in
         {
+          hancom-hwp-pastes-from-clipboard = paste (
+            self.packages.${system}.hancom-hwp.override { pasteFromClipboard = true; }
+          );
+          hancom-hwp-ibus-pastes-from-clipboard = paste (
+            self.packages.${system}.hancom-hwp-ibus.override { pasteFromClipboard = true; }
+          );
           hancom-hwp-starts = smoke { hwp = self.packages.${system}.hancom-hwp; };
           hancom-hwp-ibus-starts = smoke { hwp = self.packages.${system}.hancom-hwp-ibus; };
           hancom-hwp-ibus-system-qt-starts = smoke {
