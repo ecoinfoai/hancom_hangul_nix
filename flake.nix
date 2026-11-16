@@ -42,6 +42,7 @@
           smoke = pkgs.callPackage ./tests/smoke.nix { };
           paste = pkgs.callPackage ./tests/paste.nix { };
           cursorScale = pkgs.callPackage ./tests/cursor-scale.nix { };
+          bindNow = pkgs.callPackage ./tests/bind-now.nix { };
         in
         {
           hancom-hwp-cursor-scale = cursorScale {
@@ -71,6 +72,15 @@
               "libibusplatforminputcontextplugin.so"
             ];
           };
+          hancom-hwp-binds-all-symbols = bindNow self.packages.${system}.hancom-hwp;
+          hancom-hwp-ibus-binds-all-symbols = bindNow self.packages.${system}.hancom-hwp-ibus;
+          hancom-hwp-ibus-system-qt-binds-all-symbols = bindNow (
+            self.packages.${system}.hancom-hwp.override {
+              inputMethod = "ibus";
+              bundledQt = false;
+              pasteFromClipboard = true;
+            }
+          );
         };
 
       formatter.${system} = pkgs.nixfmt;
